@@ -1,0 +1,43 @@
+{
+  "name": "北元化工定位系统",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "prepare": "husky install",
+    "minify": "node ./scripts/minify.js",
+    "restore": "node ./scripts/restore.js",
+    "dev": "vite --host",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "husky": {
+    "hooks": {
+      "pre-commit": "npm run minify && git add src/three/index.js",
+      "post-commit": "npm run restore"
+    }
+  },
+  "dependencies": {
+    "express": "^5.1.0",
+    "point-in-polygon-hao": "^1.1.0",
+    "postprocessing": "^6.35.4",
+    "three": "^0.164.1",
+    "three-mesh-bvh": "^0.6.3"
+  },
+  "devDependencies": {
+    "@types/three": "^0.164.1",
+    "browserify-fs": "^1.0.0",
+    "husky": "^9.1.7",
+    "path-browserify": "^1.0.1",
+    "uglify-js": "^3.19.3",
+    "vite": "^4.4.5",
+    "vite-plugin-node-polyfills": "^0.23.0",
+    "vite-plugin-static-copy": "^3.0.0",
+    "vite-plugin-virtual-html": "^1.2.6"
+  },
+  "description": "This template should help get you started developing with Vue 3 in Vite. The template uses Vue 3 `<script setup>` SFCs, check out the [script setup docs](https://v3.vuejs.org/api/sfc-script-setup.html#sfc-script-setup) to learn more.",
+  "main": "vite.config.js",
+  "keywords": [],
+  "author": "",
+  "license": "ISC"
+}
