@@ -1,16 +1,16 @@
 import * as THREE from "three";
-import { createDom,createCSS2DObject } from "../lib/CSSObject";
+import { createDom, createCSS2DObject } from "../lib/CSSObject";
 import Core from "../main";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer";
 
 const labelData = [
   {
-    position: new THREE.Vector3(-92,40,112),
+    position: new THREE.Vector3(-92, 40, 112),
     text: "压风机房",
     system: "pressureFanSubsystem",
   },
   {
-    position: new THREE.Vector3(-1568,238,-21),
+    position: new THREE.Vector3(-1568, 238, -21),
     text: "通风机房",
     system: "fanSubsystem",
   },
@@ -25,21 +25,23 @@ export class LabelManager {
 
     this.raycaster = new THREE.Raycaster();
     this.direction = new THREE.Vector3();
-    this.raycaster.set(this.camera.position,this.direction);
+    this.raycaster.set(this.camera.position, this.direction);
 
     this.labelGroup = new THREE.Group();
     this.scene.add(this.labelGroup);
   }
 
   init() {
-    labelData.forEach(item => {
+    labelData.forEach((item) => {
       this.insertLabel(item);
     });
   }
 
   insertLabel(data) {
     // 测试，待删
-    const mesh = this.createLabel(data.text,() => this.core.changeSystem(data.system));
+    const mesh = this.createLabel(data.text, () =>
+      this.core.changeSystem(data.system)
+    );
     mesh.position.copy(data.position);
     this.labelGroup.add(mesh);
   }
@@ -54,7 +56,7 @@ export class LabelManager {
   }
 
   //插入点的图标
-  createLabel(text,func) {
+  createLabel(text, func) {
     const labelEle = createDom();
     labelEle.style.position = "absolute";
 
@@ -78,11 +80,11 @@ export class LabelManager {
       };
     }
 
-    return createCSS2DObject(labelEle,"buildingLabel");
+    return createCSS2DObject(labelEle, "buildingLabel");
   }
 
-  changeVisible(group,f) {
-    group.traverse(child => {
+  changeVisible(group, f) {
+    group.traverse((child) => {
       if (child instanceof CSS2DObject) {
         child.visible = f;
       }
@@ -98,10 +100,10 @@ export class LabelManager {
    * @param {THREE.Group} params
    */
   computeVis(params) {
-    params.children.forEach(child => {
+    params.children.forEach((child) => {
       const origin = Store3D.currentCamera.position;
       const direction = child.position.clone().sub(origin).normalize();
-      this.raycaster.set(origin,direction);
+      this.raycaster.set(origin, direction);
       const i = this.raycaster.intersectObject(Store3D.getViewBox());
 
       const l = origin.distanceTo(child.position);

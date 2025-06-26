@@ -10,6 +10,7 @@ import EquipmentPlate from "../../components/business/equipMentPlate";
 import { SunnyTexture } from "../../components/weather";
 import { SpecialGround } from "../../../lib/blMeshes";
 import { dynamicFade, fadeByTime } from "../../../shader";
+import { SceneHint } from "../../components/SceneHint";
 
 let rightMouseupTime = 0;
 
@@ -51,12 +52,28 @@ export class IndoorSubsystem extends CustomSystem {
     // 保存用于射线检测的楼层引用，定位
     this.floors = [];
 
+    // 初始化场景提示
+    this.sceneHint = new SceneHint();
+
     this.initLight();
   }
 
   onEnter(buildingName) {
+    // 进入室内时隐藏室外建筑牌子
+    if (this.core.ground && this.core.ground.hideAllBuildingLabel) {
+      this.core.ground.hideAllBuildingLabel();
+    }
     this.currentPoint = null; // 当前所指向的模型
     EquipmentPlate.onLoad(this, this.core); // 设备系统
+
+    // 检查并重新初始化场景提示（如果被销毁了）
+    if (!this.sceneHint) {
+      this.sceneHint = new SceneHint();
+    }
+
+    // 显示室内场景提示
+    this.sceneHint.show("右键双击返回室外");
+
     let obj = {
       name: buildingName,
       path: `./models/inDoor/${buildingName}_室内.glb`,
@@ -230,8 +247,18 @@ export class IndoorSubsystem extends CustomSystem {
     });
   }
   onLeave() {
+    // 离开室内时显示室外建筑牌子
+    if (this.core.ground && this.core.ground.showAllBuildingLabel) {
+      this.core.ground.showAllBuildingLabel();
+    }
     console.log("离开子场景");
     this.resetControls();
+
+    // 隐藏场景提示
+    if (this.sceneHint) {
+      this.sceneHint.hide();
+    }
+
     this.dispose();
   }
   addEventListener() {
@@ -279,6 +306,11 @@ export class IndoorSubsystem extends CustomSystem {
         this.core.crossSearch.changeSceneSearch();
         this.endChangeFloor = true;
         this.gatherOrSilentShader();
+
+        // 更新提示信息为楼栋状态
+        if (this.sceneHint) {
+          this.sceneHint.updateMessage("右键双击显示楼栋");
+        }
       }); // 切换楼层动画
       this.buildingAnimate(floor); // 建筑动画
     }
@@ -497,6 +529,9 @@ export class IndoorSubsystem extends CustomSystem {
           this.resetData();
         });
     });
+    if (this.sceneHint) {
+      this.sceneHint.updateMessage("右键双击返回室外");
+    }
   }
   resetData() {
     // 清除数据
@@ -518,6 +553,12 @@ export class IndoorSubsystem extends CustomSystem {
     this.resetData();
     this.scene.dispose();
     lightIndexUpdate();
+
+    // 清理场景提示资源
+    if (this.sceneHint) {
+      this.sceneHint.destroy();
+      this.sceneHint = null;
+    }
   }
   // 限制镜头移动
   cameraMoveLimit(center, size) {

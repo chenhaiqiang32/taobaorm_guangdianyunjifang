@@ -321,18 +321,18 @@ export class Store3D extends CoreExtensions {
   }
 
   clearSearch() {
-    let currentSearchPersonId = this.orientation.searchId;
-    let currentSearchBuildingId = null;
-    if (this.sceneType === 1) {
-      currentSearchBuildingId = this.ground.searchBuildingId;
-    }
-    let currentSearchEquipId = this.currentSystem.getSearchEquipId();
-    if (currentSearchPersonId)
-      this.currentSystem.clearSelected(currentSearchPersonId); // 关闭人员弹窗
-    if (currentSearchEquipId)
-      this.currentSystem.clearCameraVideo(currentSearchEquipId); // 关闭摄像头的牌子
-    if (currentSearchBuildingId)
-      this.hideBuildingDialog(currentSearchBuildingId); // 关闭建筑弹窗
+    // let currentSearchPersonId = this.orientation.searchId;
+    // let currentSearchBuildingId = null;
+    // if (this.sceneType === 1) {
+    //   currentSearchBuildingId = this.ground.searchBuildingId;
+    // }
+    // let currentSearchEquipId = this.currentSystem.getSearchEquipId();
+    // if (currentSearchPersonId)
+    //   this.currentSystem.clearSelected(currentSearchPersonId); // 关闭人员弹窗
+    // if (currentSearchEquipId)
+    //   this.currentSystem.clearCameraVideo(currentSearchEquipId); // 关闭摄像头的牌子
+    // if (currentSearchBuildingId)
+    //   this.hideBuildingDialog(currentSearchBuildingId); // 关闭建筑弹窗
   }
 
   searchPerson(data) {

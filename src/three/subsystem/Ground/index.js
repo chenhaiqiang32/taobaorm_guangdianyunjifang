@@ -31,6 +31,8 @@ import { modelProcess } from "../../processing";
 import { GatherOrSilentFence } from "../../components/business/fencePlate/gatherOrSilentFence";
 import { MeetingPointPlate } from "../../components/business/equipMentPlate/meetingPoint";
 import { modelFiles, buildingNames } from "../../../assets/modelList";
+import { Tooltip } from "../../components/Tooltip";
+import { SceneHint } from "../../components/SceneHint";
 
 // 动画管理器
 class AnimationManager {
@@ -163,6 +165,13 @@ export class Ground extends CustomSystem {
 
     // 初始化动画管理器
     this.animationManager = new AnimationManager();
+
+    // 初始化提示框
+    this.tooltip = new Tooltip();
+    this.labelGroup.add(this.tooltip.css2dObject);
+
+    // 初始化场景提示
+    this.sceneHint = new SceneHint();
 
     this.init();
   }
@@ -365,14 +374,9 @@ export class Ground extends CustomSystem {
   groundClickEvent(ray) {
     let buildingInserts = ray.intersectObjects(this.buildingMeshArr);
     if (buildingInserts.length) {
-      debugger;
       const intersectedMesh = buildingInserts[0].object;
       if (intersectedMesh.userData.buildingName) {
-        this.core.clearSearch(); // 清除现有搜索条件
-        this.searchBuildingId = intersectedMesh.userData.buildingName;
-        this.searchBuilding();
-        this.removeEventListener();
-        this.addEventListener(); // 搜索楼栋的时候可以正常进入建筑内部
+        this.commonSearchBuilding(intersectedMesh.userData.buildingName);
       }
     }
   }
@@ -393,7 +397,6 @@ export class Ground extends CustomSystem {
           if (intersectedMesh.userData.buildingName) {
             this.postprocessing.clearOutlineAll(1);
             const pickBuilding = this.buildingMeshObj[this.searchBuildingId];
-
             // 获取所有属于同一建筑的网格
             const buildingMeshes = this.buildingMeshArr.filter(
               (mesh) =>
@@ -407,6 +410,18 @@ export class Ground extends CustomSystem {
                 1
               );
             }
+
+            // 检查是否可以进入室内，如果可以则显示提示框
+            const buildingName = intersectedMesh.userData.buildingName;
+            if (
+              this.buildingNames.some((name) => buildingName.includes(name))
+            ) {
+              // 计算提示框位置（在建筑上方）
+              const position = new THREE.Vector3();
+              intersectedMesh.getWorldPosition(position);
+              position.y += 10; // 在建筑上方显示
+              this.tooltip.show(position);
+            }
           }
         } else {
           this.postprocessing.clearOutlineAll(1);
@@ -414,6 +429,8 @@ export class Ground extends CustomSystem {
             let pickBuilding = this.buildingMeshObj[this.searchBuildingId];
             this.postprocessing.addOutline(pickBuilding, 1);
           }
+          // 隐藏提示框
+          this.tooltip.hide();
         }
       }
     );
@@ -428,7 +445,7 @@ export class Ground extends CustomSystem {
         }
       }
     );
-    this.eventClear.push(cancel);
+    // this.eventClear.push(cancel);
     this.eventClear.push(mousemovePointer.clear);
     this.eventClear.push(mousemove.clear);
   }
@@ -441,6 +458,10 @@ export class Ground extends CustomSystem {
     EquipmentPlate.onLoad(this, this.core); // 设备系统
     this.boxSelect.onLoad(this);
     this.filterBuildingNum(); // 每次进入都要调用一下筛选
+
+    // 显示室外场景提示
+    this.sceneHint.show("右键双击恢复默认视角");
+
     if (this.isLoaded) {
       return new Promise((res, rej) => {
         this.onLoaded();
@@ -480,6 +501,11 @@ export class Ground extends CustomSystem {
       });
     });
     this.searchBuildingId = null;
+
+    // 隐藏提示框
+    if (this.tooltip) {
+      this.tooltip.hide();
+    }
   }
   clearDangerFence() {
     this.fencePlate.clearDangerFence();
@@ -558,9 +584,8 @@ export class Ground extends CustomSystem {
       // 通知前端显示建筑弹窗
       getBuildingDetail(this.searchBuildingId);
     }
-    let currentBoard = this.buildingNameLabelMap[this.searchBuildingId];
-    this.showSingleBuildingBoard(this.searchBuildingId); // 显示单个建筑牌子
-    this.boardClick(currentBoard); // 视角拉近建筑
+    let title = this.buildingNameLabelMap[this.searchBuildingId];
+    this.boardClick(title); // 视角拉近建筑
 
     this.postprocessing.clearOutlineAll(1);
     let pickBuilding = this.buildingMeshObj[this.searchBuildingId];
@@ -631,9 +656,10 @@ string} name
           this.buildingMeshObj[child.name] = child;
 
           // 设置网格的用户数据，标记它属于哪个建筑
-          child.userData.buildingName = name.split("_")[0];
+          child.userData.buildingName = name;
         }
       });
+      this.setBuildingBoard(model);
     }
 
     // 处理动画
@@ -678,8 +704,32 @@ string} name
 
     // 根据建筑编号，找到对应的建筑名称，创建建筑标识牌
     const buildingName = buildingMap[name];
-    const nameLabel = createBuildingNameLabel(buildingName, this.boardClick);
-    nameLabel.visible = false;
+    const nameLabel = createBuildingNameLabel(
+      buildingName,
+      // 单击：拉近视角
+      (css2d) => {
+        this.cameraMoveToBuildingTitle(name);
+      },
+      // 双击：切换进入室内
+      (css2d) => {
+        this.core.changeSystem("indoorSubsystem", name.split("_")[0]);
+      },
+      // 鼠标进入：显示提示框
+      (css2d) => {
+        if (
+          this.buildingNames.some((buildingName) => name.includes(buildingName))
+        ) {
+          const position = css2d.position.clone();
+          position.y += 5; // 在牌子稍微上方显示
+          this.tooltip.show(position);
+        }
+      },
+      // 鼠标离开：隐藏提示框
+      (css2d) => {
+        this.tooltip.hide();
+      }
+    );
+    nameLabel.visible = true; // 默认显示
     nameLabel.position.copy(currentPosition);
     this.labelGroup.add(nameLabel);
     this.buildingNameLabelMap[name] = nameLabel;
@@ -709,25 +759,19 @@ string} name
 
   cameraMoveToBuildingTitle(id) {
     // 相机移动到建筑牌子
-    let titlePosition = this.buildingNameLabelMap[id].position;
-    this.tweenControl.changeTo({
-      start: this.camera.position,
-      end: titlePosition,
-      duration: 1000,
-      onStart: () => {
-        this.controls.enabled = false;
-      },
-      onComplete: () => {
-        this.controls.enabled = true;
-      },
-      onUpdate: () => {
-        this.controls.target.copy(center);
-      },
-    });
+    this.commonSearchBuilding(id);
+  }
+  commonSearchBuilding(id) {
+    console.log(id, "id");
+    // this.core.clearSearch(); // 清除现有搜索条件
+    this.searchBuildingId = id;
+    this.searchBuilding();
+    this.removeEventListener();
+    this.addEventListener(); // 搜索楼栋的时候可以正常进入建筑内部
   }
   boardClick = (board) => {
-    const offset = new THREE.Vector3(0, 50, 0);
-    this.tweenControl.lerpTo(board.position, 100, 1000, offset);
+    const offset = new THREE.Vector3(2, 2, 0);
+    this.tweenControl.lerpTo(board.position, 20, 1000, offset);
   };
 
   buildingNumClick(id) {
@@ -758,7 +802,7 @@ string} name
 
   onLeave() {
     this.weather.resetComposer();
-    this.hideAllBuildingLabel();
+    this.hideAllBuildingLabel(); // 离开时隐藏所有建筑牌子
     this.resetControls();
     this.setCameraState(false);
     this.core.onRenderQueue.delete(fenceSymbol);
@@ -767,6 +811,17 @@ string} name
     this.boxSelect.end();
     this.removeEventListener();
     document.body.style.cursor = "auto";
+
+    // 清理提示框
+    if (this.tooltip) {
+      this.tooltip.hide();
+    }
+
+    // 隐藏场景提示
+    if (this.sceneHint) {
+      this.sceneHint.hide();
+    }
+
     console.log("离开地面广场系统");
   }
   onLoaded() {
@@ -988,5 +1043,25 @@ string} name
     dir3.position.set(150, 100, 0);
 
     // this._add(dir3);
+  }
+  showAllBuildingLabel() {
+    Object.values(this.buildingNameLabelMap).forEach((child) => {
+      child.visible = true;
+      child.element.style.display = "block";
+    });
+  }
+
+  destroy() {
+    // 清理提示框资源
+    if (this.tooltip) {
+      this.tooltip.destroy();
+      this.tooltip = null;
+    }
+
+    // 清理场景提示资源
+    if (this.sceneHint) {
+      this.sceneHint.destroy();
+      this.sceneHint = null;
+    }
   }
 }
