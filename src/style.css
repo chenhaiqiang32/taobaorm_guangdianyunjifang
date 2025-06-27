@@ -43,12 +43,12 @@ body,
     /* box-shadow: inset 0px 0px 5px 0px rgba(13, 10, 0, 0.7);
 		border-radius: 1px; */
     position: absolute;
-    letter-spacing: 2px;
+    letter-spacing: 4px;
     border: 1px solid #4d95ad;
     transform: translate(-50%, -50%) scale(1);
     /* border-image: linear-gradient(180deg, rgba(233, 255, 253, 1), rgba(47, 215, 193, 1), rgba(8, 106, 93, 1), rgba(18, 107, 105, 1), rgba(47, 211, 215, 1)) 1 1; */
-    font-size: 12px;
-    font-family: YouSheBiaoTiHei;
+    font-size: 14px;
+    font-family: 微软雅黑;
     color: #ffffff;
     line-height: 12px;
     bottom: 24px;

@@ -5,7 +5,7 @@ import { loadGLTF } from "@/three/loader";
 import { getBoxCenter } from "../../../lib/box3Fun";
 import { lightIndexUpdate, lightIndexReset } from "../../../shader/funs";
 
-import { closeDialog, getPerson } from "../../../message/postMessage";
+import { changeIndoor } from "../../../message/postMessage";
 import EquipmentPlate from "../../components/business/equipMentPlate";
 import { SunnyTexture } from "../../components/weather";
 import { SpecialGround } from "../../../lib/blMeshes";
@@ -146,7 +146,8 @@ export class IndoorSubsystem extends CustomSystem {
     }
     if (state === "inToInOther") {
       // 室内切换进入不同楼栋的不同楼层
-      this.dispose();
+      // 使用公共清理方法替代 dispose
+      this.clearIndoorData();
       this.onEnter(buildingName).then(() => {
         // 需要等待楼层记载完毕，事件注册完毕，然后切换楼层
         this.changeFloor(floorName);
@@ -246,6 +247,56 @@ export class IndoorSubsystem extends CustomSystem {
       });
     });
   }
+
+  /**
+   * 相机移动到楼层上方能看到楼层内部的位置
+   * @param {THREE.Object3D} group - 楼层组对象
+   * @returns {Promise} 移动完成的Promise
+   */
+  cameraMoveToFloor(group) {
+    return new Promise((res, rej) => {
+      const { center, radius, min, max } = getBoxCenter(group);
+
+      // 计算楼层高度
+      const floorHeight = max.y - min.y;
+
+      // 设置目标点为楼层中心
+      const target = center.clone();
+
+      // 计算相机位置：楼层中心上方，距离为楼层高度的1.5倍，确保能看到楼层内部
+      const cameraDistance = Math.max(floorHeight * 1.5, radius * 2);
+      const position = new THREE.Vector3(
+        center.x,
+        center.y + floorHeight + cameraDistance * 0.8, // 稍微偏上一点
+        center.z + cameraDistance * 0.6 // 稍微偏后一点，形成俯视角度
+      );
+
+      // 相机移动动画
+      this.tweenControl.changeTo({
+        start: this.camera.position,
+        end: position,
+        duration: 1200,
+        onComplete: () => {
+          this.controls.enable = true;
+          res();
+        },
+        onStart: () => {
+          this.controls.enable = false;
+        },
+      });
+
+      // 目标点移动动画
+      this.tweenControl.changeTo({
+        start: this.controls.target,
+        end: target,
+        duration: 1200,
+        onUpdate: () => {
+          this.controls.update();
+        },
+      });
+    });
+  }
+
   onLeave() {
     // 离开室内时显示室外建筑牌子
     if (this.core.ground && this.core.ground.showAllBuildingLabel) {
@@ -291,6 +342,14 @@ export class IndoorSubsystem extends CustomSystem {
     this.disPoseGatherShader();
   }
   changeFloor(floor) {
+    console.log(floor, "floor");
+
+    // 检查建筑数据是否已加载完成
+    if (!this.buildingObject || !this.buildingObject[floor]) {
+      console.warn(`楼层 "${floor}" 的建筑数据尚未加载完成，请稍后再试`);
+      return false;
+    }
+
     // 首次进行楼层切换
     if (!this.endChangeFloor) return false; // 切换楼层没有结束
     this.resetData();
@@ -301,7 +360,14 @@ export class IndoorSubsystem extends CustomSystem {
       this.addIndoorEvent();
       !this.core.isFollowing() ? this.addRightDbClickReset() : null; // 跟踪状态不绑定右键双击事件,事件绑定在动画结束之后
       this.switchFloorAnimate(floor).then((res) => {
-        getPerson(res); // 通知前端切换场景，前端推送设备数据
+        if (
+          window.configs.flloorToName[this.buildingName + "_室内"] &&
+          window.configs.flloorToName[this.buildingName + "_室内"][floor]
+        ) {
+          changeIndoor(
+            window.configs.flloorToName[this.buildingName + "_室内"][floor]
+          ); // 通知前端切换场景，前端推送设备数据
+        }
         super.updateOrientation(); // 更新聚合数据
         this.core.crossSearch.changeSceneSearch();
         this.endChangeFloor = true;
@@ -418,10 +484,6 @@ export class IndoorSubsystem extends CustomSystem {
       this.addEventListener();
       this.resetBuilding(); // 重置楼层时清除楼层所有人员 onComplete
       this.disPoseGatherShader();
-      if (this.core.isSearching()) {
-        // 搜索状态 清空楼层人员
-        closeDialog();
-      }
     });
     this.eventClear.push(del);
   }
@@ -450,6 +512,16 @@ export class IndoorSubsystem extends CustomSystem {
     return del;
   }
   switchFloorAnimate(target) {
+    // 添加安全检查
+    if (
+      !this.buildingObject ||
+      !this.buildingObject[target] ||
+      !this.buildingObject[target].group
+    ) {
+      console.error(`楼层 "${target}" 的建筑数据不完整，无法执行楼层切换动画`);
+      return Promise.reject(new Error(`楼层 "${target}" 的建筑数据不完整`));
+    }
+
     const group = this.buildingObject[target].group;
 
     const { min, max } = getBoxCenter(group);
@@ -457,13 +529,24 @@ export class IndoorSubsystem extends CustomSystem {
       lightIndexUpdate(max.y, min.y); // 楼层外墙渐变动画
 
       this.currentFloor = group; // 当前楼层
-      this.cameraMove(group, 1.75).then(() => {
+      // 使用新的相机移动方法，移动到楼层上方能看到楼层内部的位置
+      this.cameraMoveToFloor(group).then(() => {
         res({ sceneType: 0, originId: target });
       });
     });
   }
   // 楼层内部之间切换
   floorSwitchInner(target) {
+    // 添加安全检查
+    if (
+      !this.buildingObject ||
+      !this.buildingObject[target] ||
+      !this.buildingObject[target].group
+    ) {
+      console.error(`楼层 "${target}" 的建筑数据不完整，无法执行楼层内部切换`);
+      return;
+    }
+
     this.endChangeFloor = false;
     // 不同楼层之间切换 前端触发 该情况下不重新绑定事件
     const group = this.buildingObject[target].group;
@@ -484,9 +567,9 @@ export class IndoorSubsystem extends CustomSystem {
       .onComplete(() => {
         this.buildingObject[lastFloor].group.visible = false;
       });
-    // 镜头动画
+    // 镜头动画 - 使用新的相机移动方法
     this.currentFloor = group; // 当前楼层
-    this.cameraMove(group, 1.75).then(() => {
+    this.cameraMoveToFloor(group).then(() => {
       getPerson({ sceneType: 0, originId: target });
       super.updateOrientation(); // 更新聚合数据
       this.core.crossSearch.changeSceneSearch();
@@ -619,5 +702,41 @@ export class IndoorSubsystem extends CustomSystem {
     dir3.position.set(150, 100, 0);
 
     this._add(dir3);
+  }
+
+  /**
+   * 清理室内系统数据（用于室内切换时的清理）
+   */
+  clearIndoorData() {
+    console.log("清理室内系统数据");
+
+    // 移除事件监听器
+    this.removeEventListener();
+
+    // 重置数据
+    this.resetData();
+
+    // 清理预警数据
+    this.disposeGatherOrSilent();
+
+    // 隐藏场景提示
+    if (this.sceneHint) {
+      this.sceneHint.hide();
+    }
+
+    // 清理场景中的建筑对象
+    if (this.building && this.building.parent) {
+      this.building.parent.remove(this.building);
+      this.building = null;
+    }
+
+    // 重置建筑相关数据
+    this.buildingObject = {};
+    this.floors = [];
+    this.currentFloor = null;
+    this.endChangeFloor = true;
+
+    // 重置控制器
+    this.resetControls();
   }
 }

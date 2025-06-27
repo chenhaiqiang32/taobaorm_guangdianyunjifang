@@ -292,6 +292,10 @@ export const onMessage = async () => {
           // Store3D.changeFloor(event.data.param);
           break;
         }
+        case "changeIndoor": {
+          core.changeIndoor(event.data.param);
+          break;
+        }
         case "goBack": {
           core.changeSystem("ground");
 

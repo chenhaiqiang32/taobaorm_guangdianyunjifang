@@ -145,7 +145,59 @@ export class Store3D extends CoreExtensions {
     const targetSystem = this[systemType];
     targetSystem.onEnter(building);
   }
+  changeIndoor(name) {
+    // 根据传入的建筑名称从配置中获取对应的路径和楼层信息
+    const buildingConfig = window.floorToName[name];
 
+    if (!buildingConfig) {
+      console.warn(`未找到建筑 "${name}" 的配置信息`);
+      return;
+    }
+
+    const { path, floor } = buildingConfig;
+
+    // 从路径中提取建筑名称（去掉 "inDoor/" 前缀和 "_室内" 后缀）
+    // 例如: "inDoor/1楼_室内" -> "1楼"
+    const buildingName = path.replace("inDoor/", "").replace("_室内", "");
+
+    // 检查当前是否已经在室内系统
+    const isCurrentlyIndoor = this.currentSystem === this.indoorSubsystem;
+
+    // 如果当前已经在室内系统，需要先执行清理操作
+    if (isCurrentlyIndoor) {
+      console.log("当前已在室内系统，执行清理操作");
+      // 使用公共清理方法
+      this.indoorSubsystem.clearIndoorData();
+    }
+
+    // 切换到室内系统
+    this.changeSystem("indoorSubsystem", buildingName);
+
+    // 等待室内系统加载完成后切换到指定楼层
+    // 使用 Promise 确保加载完成后再切换楼层
+    const waitForIndoorLoad = () => {
+      return new Promise((resolve) => {
+        const checkLoaded = () => {
+          if (
+            this.indoorSubsystem &&
+            this.indoorSubsystem.building &&
+            this.indoorSubsystem.buildingObject &&
+            this.indoorSubsystem.buildingObject[floor]
+          ) {
+            resolve();
+          } else {
+            setTimeout(checkLoaded, 100);
+          }
+        };
+        checkLoaded();
+      });
+    };
+
+    waitForIndoorLoad().then(() => {
+      // 切换到指定楼层
+      this.changeFloor(floor);
+    });
+  }
   clearFence() {
     if (this.currentSystem && this.currentSystem.clearFence) {
       this.currentSystem.clearFence();
@@ -167,8 +219,18 @@ export class Store3D extends CoreExtensions {
     }
 
     if (currentSystem) {
-      if (targetSystem === currentSystem) return;
-      currentSystem.onLeave();
+      // 如果是同一个系统，但需要重新初始化（比如室内到室内的切换）
+      if (targetSystem === currentSystem) {
+        // 对于室内系统，允许重新初始化
+        if (systemType === "indoorSubsystem") {
+          console.log("室内系统重新初始化");
+          // 不执行 onLeave，因为已经在 changeIndoor 中处理了清理
+        } else {
+          return; // 其他系统相同则不处理
+        }
+      } else {
+        currentSystem.onLeave();
+      }
     }
 
     this.orientation.orientation3D.disposeClusterGroup();

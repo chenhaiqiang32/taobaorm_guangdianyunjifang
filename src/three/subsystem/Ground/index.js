@@ -8,7 +8,7 @@ import { Store3D } from "../..";
 import {
   dblclickBuilding,
   getBuildingDetail,
-  getPerson,
+  changeIndoor,
   postBuildingId,
 } from "../../../message/postMessage";
 import { SunnyTexture, Weather } from "../../components/weather";
@@ -239,8 +239,6 @@ export class Ground extends CustomSystem {
       }
 
       // 移除 loading 状态
-      this.isLoaded = true;
-      this.onLoaded();
     } catch (error) {
       console.error("❌ 加载模型时出错:", error);
       // 显示更详细的错误信息
@@ -451,6 +449,7 @@ export class Ground extends CustomSystem {
   }
 
   onEnter() {
+    debugger;
     // 北元版本 切换子场景时会重置composer饱和度亮度为白天的配置 切回主场景时需要重新更新原有设置
     this.weather && this.weather.resetComposer(this.weather.lightingPattern);
 
@@ -459,19 +458,18 @@ export class Ground extends CustomSystem {
     this.boxSelect.onLoad(this);
     this.filterBuildingNum(); // 每次进入都要调用一下筛选
 
+    // 重新创建提示框（如果在 onLeave 中被销毁了）
+    if (!this.tooltip) {
+      this.tooltip = new Tooltip();
+      this.labelGroup.add(this.tooltip.css2dObject);
+    }
+
     // 显示室外场景提示
     this.sceneHint.show("右键双击恢复默认视角");
 
-    if (this.isLoaded) {
-      return new Promise((res, rej) => {
-        this.onLoaded();
-        res();
-      });
-    } else {
-      //模型首次加载
-      this.isLoaded = true;
-
+    if (this.groundMesh) {
       this.onLoaded();
+      this.isLoaded = true;
     }
   }
 
@@ -726,7 +724,7 @@ string} name
       },
       // 鼠标离开：隐藏提示框
       (css2d) => {
-        this.tooltip.hide();
+        this.tooltip && this.tooltip.hide();
       }
     );
     nameLabel.visible = true; // 默认显示
@@ -815,6 +813,8 @@ string} name
     // 清理提示框
     if (this.tooltip) {
       this.tooltip.hide();
+      this.tooltip.destroy();
+      this.tooltip = null;
     }
 
     // 隐藏场景提示
@@ -844,13 +844,8 @@ string} name
     console.log("All models loaded successfully");
     this.addEventListener();
     // ground场景正常流程镜头动画
-
+    changeIndoor("home");
     this.resetCamera(1500).then(() => {
-      getPerson({
-        // 通知前端切换了场景，前端推送设备数据
-        sceneType: 1,
-        originId: "",
-      });
       if (this.core && this.core.crossSearch) {
         this.core.crossSearch.changeSceneSearch();
       }
