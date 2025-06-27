@@ -361,11 +361,11 @@ export class IndoorSubsystem extends CustomSystem {
       !this.core.isFollowing() ? this.addRightDbClickReset() : null; // 跟踪状态不绑定右键双击事件,事件绑定在动画结束之后
       this.switchFloorAnimate(floor).then((res) => {
         if (
-          window.configs.flloorToName[this.buildingName + "_室内"] &&
-          window.configs.flloorToName[this.buildingName + "_室内"][floor]
+          window.configs.floorToName[this.buildingName + "_室内"] &&
+          window.configs.floorToName[this.buildingName + "_室内"][floor]
         ) {
           changeIndoor(
-            window.configs.flloorToName[this.buildingName + "_室内"][floor]
+            window.configs.floorToName[this.buildingName + "_室内"][floor]
           ); // 通知前端切换场景，前端推送设备数据
         }
         super.updateOrientation(); // 更新聚合数据
