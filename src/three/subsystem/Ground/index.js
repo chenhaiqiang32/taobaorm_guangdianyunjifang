@@ -114,7 +114,7 @@ const controlsParameters = {
 /**@classdesc 地面广场子系统 */
 export class Ground extends CustomSystem {
   /** @param {Store3D} core*/
-  constructor(core) {
+  constructor(core, autoInit = true) {
     super(core);
 
     this.tweenControl = core.tweenControl;
@@ -125,7 +125,6 @@ export class Ground extends CustomSystem {
     this.camera = core.camera;
     this.orientation = core.orientation;
 
-    this.boxSelect = core.orientation.boxSelect;
     this.postprocessing = core.postprocessing;
 
     this.outBuildingGroup = new THREE.Group();
@@ -173,7 +172,13 @@ export class Ground extends CustomSystem {
     // 初始化场景提示
     this.sceneHint = new SceneHint();
 
-    this.init();
+    // 初始化标志
+    this._hasInitialized = false;
+
+    // 只有在autoInit为true时才自动初始化
+    if (autoInit) {
+      this.init();
+    }
   }
 
   async init() {
@@ -238,7 +243,12 @@ export class Ground extends CustomSystem {
         }
       }
 
-      // 移除 loading 状态
+      // 初始化完成后，如果当前系统是ground，则设置场景
+      if (this.core.currentSystem === this) {
+        this.core.changeScene(this.scene);
+      }
+
+      console.log("✅ Ground系统初始化完成");
     } catch (error) {
       console.error("❌ 加载模型时出错:", error);
       // 显示更详细的错误信息
@@ -449,13 +459,17 @@ export class Ground extends CustomSystem {
   }
 
   onEnter() {
-    debugger;
+    // 如果系统还没有加载完成，直接返回
+    if (!this.isLoaded) {
+      console.log("Ground系统尚未加载完成，跳过onEnter操作");
+      return;
+    }
+
     // 北元版本 切换子场景时会重置composer饱和度亮度为白天的配置 切回主场景时需要重新更新原有设置
     this.weather && this.weather.resetComposer(this.weather.lightingPattern);
 
     this.handleControls();
     EquipmentPlate.onLoad(this, this.core); // 设备系统
-    this.boxSelect.onLoad(this);
     this.filterBuildingNum(); // 每次进入都要调用一下筛选
 
     // 重新创建提示框（如果在 onLeave 中被销毁了）
@@ -467,9 +481,33 @@ export class Ground extends CustomSystem {
     // 显示室外场景提示
     this.sceneHint.show("右键双击恢复默认视角");
 
-    if (this.groundMesh) {
-      this.onLoaded();
-      this.isLoaded = true;
+    // 确保事件监听器已绑定
+    if (this.groundMesh && this.eventClear.length === 0) {
+      this.addEventListener();
+    }
+
+    // 执行后续切换时的初始化设置
+    this.performEnterInitialization();
+  }
+
+  /**
+   * 执行进入ground场景时的初始化设置
+   * 这个方法包含onLoaded中的一些设置，但不包括模型加载和第一次的相机动画
+   */
+  performEnterInitialization() {
+    // 设置漫游状态
+    if (this.roamEnabled) {
+      this.setCameraState(true);
+    }
+
+    // 重置相机到默认位置（但不执行第一次的动画）
+    if (this._hasInitialized) {
+      this.resetCamera(1000).then(() => {
+        if (this.core && this.core.crossSearch) {
+          this.core.crossSearch.changeSceneSearch();
+        }
+        super.updateOrientation();
+      });
     }
   }
 
@@ -564,17 +602,6 @@ export class Ground extends CustomSystem {
     this.addEventListener();
     this.resetCamera();
   }
-  changeBoxSelect(state) {
-    this.boxSelectStatus = state;
-    if (state) {
-      this.removeEventListener();
-      this.boxSelect.start();
-    } else {
-      this.boxSelect.end();
-      this.addEventListener();
-      this.resetCamera();
-    }
-  }
 
   searchBuilding(visible = true) {
     if (visible) {
@@ -604,7 +631,8 @@ string} name
    * @returns
    */
   onProgress(gltf, name) {
-    if (this.core.scene !== this.scene) return;
+    // 在延迟初始化的情况下，允许模型加载
+    // if (this.core.scene !== this.scene) return;
     const model = gltf.scene;
 
     if (name === "地面") {
@@ -806,7 +834,6 @@ string} name
     this.core.onRenderQueue.delete(fenceSymbol);
     this.measureArea.end();
     this.measureDistance.end();
-    this.boxSelect.end();
     this.removeEventListener();
     document.body.style.cursor = "auto";
 
@@ -825,12 +852,11 @@ string} name
     console.log("离开地面广场系统");
   }
   onLoaded() {
+    // 设置加载完成标志
+    this.isLoaded = true;
+
     if (!this.useCameraState) {
       autoRotate(this);
-    }
-
-    if (this.roamEnabled) {
-      this.setCameraState(true);
     }
 
     if (this.instancedMesh && this.instancedMesh.length > 0) {
@@ -843,31 +869,21 @@ string} name
 
     console.log("All models loaded successfully");
     this.addEventListener();
-    // ground场景正常流程镜头动画
-    changeIndoor("home");
-    this.resetCamera(1500).then(() => {
-      if (this.core && this.core.crossSearch) {
-        this.core.crossSearch.changeSceneSearch();
-      }
-      super.updateOrientation();
-    }); // 镜头动画结束后执行事件绑定
 
-    if (this.fencePlate) {
-      this.core.onRenderQueue.set(
-        fenceSymbol,
-        this.fencePlate.update.bind(this.fencePlate)
-      );
-    }
-
-    // 在模型加载完成设置测距和测面积模块的射线检测对象。
-    if (this.measureArea && this.groundMesh) {
-      this.measureArea.setRaycastObject(this.groundMesh);
-    }
-    if (this.boxSelect && this.groundMesh) {
-      this.boxSelect.setRaycastObject(this.groundMesh);
-    }
-    if (this.measureDistance && this.groundMesh) {
-      this.measureDistance.setRaycastObject(this.groundMesh);
+    // 只有在第一次加载时才执行相机动画
+    if (!this._hasInitialized) {
+      this._hasInitialized = true;
+      // ground场景正常流程镜头动画
+      changeIndoor("home");
+      this.resetCamera(1500).then(() => {
+        if (this.core && this.core.crossSearch) {
+          this.core.crossSearch.changeSceneSearch();
+        }
+        super.updateOrientation();
+      }); // 镜头动画结束后执行事件绑定
+    } else {
+      // 如果不是第一次加载，执行普通的初始化设置
+      this.performEnterInitialization();
     }
   }
   removeEventListener() {

@@ -61,9 +61,6 @@ export class Orientation {
     /** 人员聚合模块 */
     this.clusterModule = new Cluster(this);
 
-    /** 人员框选模块 */
-    this.boxSelect = new BoxSelect(this);
-
     /** 人员搜索模块 */
     this.personSearchModule = new Search(this);
 

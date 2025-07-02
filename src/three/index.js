@@ -97,7 +97,8 @@ export class Store3D extends CoreExtensions {
 
     // this.initStats(); //todo 帧数检测
 
-    this.ground = new Ground(this);
+    // 延迟初始化Ground系统，不在这里调用init()
+    this.ground = new Ground(this, false); // 传入false表示不自动初始化
     // 室内
     this.indoorSubsystem = new IndoorSubsystem(this);
 
@@ -106,7 +107,7 @@ export class Store3D extends CoreExtensions {
 
     this.gatherWarning = new GatherWarning(this);
 
-    this.changeSystem("ground");
+    // this.changeSystem("ground");
 
     this.onRenderQueue.set("elapsedTimeUpdate", (scope) =>
       shaderUpdateTime(scope.elapsedTime)
@@ -143,7 +144,27 @@ export class Store3D extends CoreExtensions {
     this.orientation.clearSearch();
 
     const targetSystem = this[systemType];
-    targetSystem.onEnter(building);
+
+    // 如果是第一次切换到ground系统，需要先初始化
+    if (systemType === "ground" && !targetSystem.isLoaded) {
+      console.log("首次切换到ground系统，开始初始化...");
+      targetSystem
+        .init()
+        .then(() => {
+          // 初始化完成后设置场景
+          this.changeScene(targetSystem.scene);
+          targetSystem.onEnter(building);
+        })
+        .catch((error) => {
+          console.error("Ground系统初始化失败:", error);
+        });
+    } else {
+      // 确保场景已正确设置
+      if (targetSystem.isLoaded && systemType === "ground") {
+        this.changeScene(targetSystem.scene);
+      }
+      targetSystem.onEnter(building);
+    }
   }
   changeIndoor(name) {
     // 根据传入的建筑名称从配置中获取对应的路径和楼层信息
@@ -236,7 +257,12 @@ export class Store3D extends CoreExtensions {
     this.orientation.orientation3D.disposeClusterGroup();
     this.orientation.orientation3D.disposeAlarm();
 
-    this.changeScene(targetSystem.scene);
+    // 对于室内系统，立即设置场景
+    if (systemType === "indoorSubsystem") {
+      this.changeScene(targetSystem.scene);
+    }
+    // 对于ground系统，场景设置将在changeSystem方法中处理
+
     this.currentSystem = targetSystem;
     this.sceneType =
       systemType === "ground"
@@ -259,6 +285,10 @@ export class Store3D extends CoreExtensions {
     const targetSystem = this[systemType];
     if (sceneChangeType === "inToOut") {
       // 如果是 室内 => 室外 ，执行 onEnter 函数
+      // 确保ground系统的场景已设置
+      if (systemType === "ground" && targetSystem.isLoaded) {
+        this.changeScene(targetSystem.scene);
+      }
       targetSystem.onEnter();
     } else {
       // 如果是另外情况， 执行以下方法

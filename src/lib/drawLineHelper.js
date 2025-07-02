@@ -1,14 +1,19 @@
-import { Vector3,Scene,Group } from "three";
+import { Vector3, Scene, Group } from "three";
 
-import { vec3ToNum,checkLinesCross,vec3ToVec2 } from "../utils";
+import { vec3ToNum, checkLinesCross, vec3ToVec2 } from "../utils";
 import { Line2 } from "three/examples/jsm/lines/Line2";
 import { LineMaterial } from "three/examples/jsm/lines/LineMaterial.js";
 import { LineGeometry } from "three/examples/jsm/lines/LineGeometry.js";
-import { getLengthFromVertices,getPolygonArea } from "../utils";
+import { getLengthFromVertices, getPolygonArea } from "../utils";
 
 const _geometry = new LineGeometry();
-const material = new LineMaterial({ color: 0xff00ff,linewidth: 4,depthTest: false,transparent: true });
-material.resolution.set(window.innerWidth,window.innerHeight);
+const material = new LineMaterial({
+  color: 0xff00ff,
+  linewidth: 4,
+  depthTest: false,
+  transparent: true,
+});
+material.resolution.set(window.innerWidth, window.innerHeight);
 
 /** @description 画线辅助工具*/
 export class DrawLineHelper {
@@ -80,7 +85,7 @@ export class DrawLineHelper {
     this.group = new Group();
     this.group.name = "绘制组";
 
-    this.group.add(this.line,this.moveLine);
+    this.group.add(this.line, this.moveLine);
     this.scene._add(this.group);
   }
 
@@ -92,16 +97,24 @@ export class DrawLineHelper {
     if (!this.#active) return;
     if (
       this.needCheckLinesCross &&
-      checkLinesCross(vec3ToVec2(this.points,"x","z"),vec3ToVec2(point,"x","z"))
+      checkLinesCross(
+        vec3ToVec2(this.points, "x", "z"),
+        vec3ToVec2(point, "x", "z")
+      )
     ) {
-      setTimeout(() => { // 给个提示但是不能阻塞进程
+      setTimeout(() => {
+        // 给个提示但是不能阻塞进程
         alert("相交了,操作无效");
-      },0);
+      }, 0);
       console.log("相交了,操作无效");
       return;
     }
 
-    if (this.needToAdhereToFirstPoint && this.count > 1 && point.equals(this.points[0])) {
+    if (
+      this.needToAdhereToFirstPoint &&
+      this.count > 1 &&
+      point.equals(this.points[0])
+    ) {
       this.isClosed = true;
     }
 
@@ -112,13 +125,16 @@ export class DrawLineHelper {
     this.updateMoveLine(point);
 
     if (!this.line.parent) {
-      this.group.add(this.line,this.moveLine);
+      this.group.add(this.line, this.moveLine);
     }
   }
 
   /**结束绘制,moveLine将会释放它的资源。*/
   end() {
-    this.moveLine.deleteSelf();
+    if (this.moveLine) {
+      this.moveLine.deleteSelf();
+      this.moveLine = null;
+    }
   }
 
   /**撤回已经绘制的线段上的最后一点 */
@@ -133,8 +149,11 @@ export class DrawLineHelper {
   }
 
   _create() {
-    this.line = new Line2(undefined,material);
-    this.moveLine = new Line2(new LineGeometry().setPositions([0,0,0,0,0,0]),material);
+    this.line = new Line2(undefined, material);
+    this.moveLine = new Line2(
+      new LineGeometry().setPositions([0, 0, 0, 0, 0, 0]),
+      material
+    );
   }
 
   /**
@@ -150,7 +169,9 @@ export class DrawLineHelper {
    * @param {number} [toFixed=2] 小数点后保留位数
    */
   getTotalLength(toFixed = 2) {
-    return parseFloat(getLengthFromVertices([...this.points,this.movePoint]).toFixed(toFixed));
+    return parseFloat(
+      getLengthFromVertices([...this.points, this.movePoint]).toFixed(toFixed)
+    );
   }
 
   /**
@@ -159,7 +180,9 @@ export class DrawLineHelper {
    */
   getArea(toFixed = 2) {
     if (this.isClosed) {
-      return parseFloat(getPolygonArea(vec3ToVec2(this.points,"x","z")).toFixed(toFixed));
+      return parseFloat(
+        getPolygonArea(vec3ToVec2(this.points, "x", "z")).toFixed(toFixed)
+      );
     }
     return 0;
   }
@@ -170,8 +193,8 @@ export class DrawLineHelper {
    */
   getCenter(target = new Vector3()) {
     const center = target;
-    this.points.forEach(point => {
-      center.addScaledVector(point,1 / this.points.length);
+    this.points.forEach((point) => {
+      center.addScaledVector(point, 1 / this.points.length);
     });
     return center;
   }
@@ -181,18 +204,26 @@ export class DrawLineHelper {
    * @param {number} width
    * @param {number} height
    */
-  onresize(width,height) {
-    material.resolution.set(width,height);
+  onresize(width, height) {
+    material.resolution.set(width, height);
   }
 
   /**更新moveLine */
   updateMoveLine(point) {
     if (!this.#active) return;
     if (this.count) {
-      const { x,y,z } = this.points[this.count - 1];
+      const { x, y, z } = this.points[this.count - 1];
       if (point === undefined) {
-        const positions = this.moveLine.geometry.attributes.instanceStart.data.array;
-        this.moveLine.geometry.setPositions([x,y,z,positions[3],positions[4],positions[5]]);
+        const positions =
+          this.moveLine.geometry.attributes.instanceStart.data.array;
+        this.moveLine.geometry.setPositions([
+          x,
+          y,
+          z,
+          positions[3],
+          positions[4],
+          positions[5],
+        ]);
       } else {
         this.movePoint.copy(point);
         if (this.needToAdhereToFirstPoint) {
@@ -202,7 +233,14 @@ export class DrawLineHelper {
           }
         }
 
-        this.moveLine.geometry.setPositions([x,y,z,point.x,point.y,point.z]);
+        this.moveLine.geometry.setPositions([
+          x,
+          y,
+          z,
+          point.x,
+          point.y,
+          point.z,
+        ]);
         this.moveLine.visible = true;
       }
     } else {
