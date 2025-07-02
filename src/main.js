@@ -1,4 +1,5 @@
 // 使用单例模式
+import { postOnLoaded } from "./message/postMessage";
 class Store3DSingleton {
   constructor() {
     if (Store3DSingleton.instance) {
@@ -59,9 +60,14 @@ document.addEventListener("DOMContentLoaded", () => {
     return;
   }
 
-  store3D.init(canvas).catch((error) => {
-    console.error("初始化失败:", error);
-  });
+  store3D
+    .init(canvas)
+    .catch((error) => {
+      console.error("初始化失败:", error);
+    })
+    .then(() => {
+      postOnLoaded();
+    });
 });
 
 // 导出单例实例
