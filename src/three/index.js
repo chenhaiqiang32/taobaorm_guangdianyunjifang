@@ -66,6 +66,11 @@ export class Store3D extends CoreExtensions {
     // 添加后处理
     this.initComposer();
 
+    // 确保场景有默认天空盒子
+    if (this.scene && !this.scene.background) {
+      this.initDefaultSkybox();
+    }
+
     // this.cameraMoveLimit();
     this._beginRender();
 
@@ -97,6 +102,9 @@ export class Store3D extends CoreExtensions {
 
     // this.initStats(); //todo 帧数检测
 
+    // 设置默认天空盒子
+    this.initDefaultSkybox();
+
     // 延迟初始化Ground系统，不在这里调用init()
     this.ground = new Ground(this, false); // 传入false表示不自动初始化
     // 室内
@@ -112,6 +120,28 @@ export class Store3D extends CoreExtensions {
     this.onRenderQueue.set("elapsedTimeUpdate", (scope) =>
       shaderUpdateTime(scope.elapsedTime)
     );
+  }
+
+  /**
+   * 初始化默认天空盒子
+   */
+  initDefaultSkybox() {
+    // 导入天气组件中的默认天空纹理
+    import("./components/weather")
+      .then(({ SunnyTexture }) => {
+        // 设置默认的天空盒子背景
+        this.scene.background = SunnyTexture;
+
+        // 设置背景旋转（可选）
+        this.scene.backgroundRotation.setFromVector3(
+          new THREE.Vector3(0, 0, 0)
+        );
+
+        console.log("✅ 默认天空盒子已设置");
+      })
+      .catch((error) => {
+        console.error("❌ 加载天空盒子纹理失败:", error);
+      });
   }
 
   hideInspectionSystemIcon(param) {
@@ -324,7 +354,19 @@ export class Store3D extends CoreExtensions {
   }
 
   changeScene(scene) {
+    // 保存当前场景的背景设置
+    const currentBackground = this.scene ? this.scene.background : null;
+    const currentBackgroundRotation = this.scene
+      ? this.scene.backgroundRotation
+      : null;
+
+    // 切换场景
     this.scene = scene;
+
+    // 如果新场景没有背景，则设置默认天空盒子
+    if (this.scene && !this.scene.background) {
+      this.initDefaultSkybox();
+    }
   }
 
   changeWeather(param) {
