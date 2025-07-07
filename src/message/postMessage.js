@@ -16,6 +16,15 @@ export const postOnLoaded = () => {
     "*"
   );
 };
+export const postFirstLoad = () => {
+  window.parent.postMessage(
+    {
+      // 三维结束模型加载
+      cmd: "firstLoad",
+    },
+    "*"
+  );
+};
 export const getInspectionId = (data) => {
   // 向前端发送请求获取人员
   window.parent.postMessage({ cmd: "inspectionId", param: data }, "*");
