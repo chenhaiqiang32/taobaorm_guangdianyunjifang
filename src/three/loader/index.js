@@ -3,12 +3,12 @@ import { LoadingManager } from "three";
 import { GLTFLoader } from "../../lib/GLTFLoader";
 import { GbkOBJLoader } from "../../lib/GbkOBJLoader";
 import { loadingInstance } from "./loading";
-import { postFirstLoad, postOnLoading } from "../../message/postMessage";
+import { postOnLoaded, postOnLoading } from "../../message/postMessage";
 
 const loadingManager = new LoadingManager(
   function onLoaded() {
     loadingInstance.close();
-    postFirstLoad();
+    postOnLoaded();
   },
   function onProgress(url, loaded, total) {
     loadingInstance.service(((100 * loaded) / total).toFixed(2));

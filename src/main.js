@@ -1,5 +1,5 @@
 // 使用单例模式
-import { postOnLoaded } from "./message/postMessage";
+import { postFirstLoad } from "./message/postMessage";
 class Store3DSingleton {
   constructor() {
     if (Store3DSingleton.instance) {
@@ -66,7 +66,7 @@ document.addEventListener("DOMContentLoaded", () => {
       console.error("初始化失败:", error);
     })
     .then(() => {
-      postOnLoaded();
+      postFirstLoad();
     });
 });
 
