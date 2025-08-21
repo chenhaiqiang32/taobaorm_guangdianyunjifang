@@ -116,7 +116,7 @@ export class Ground extends CustomSystem {
   /** @param {Store3D} core*/
   constructor(core, autoInit = true) {
     super(core);
-
+    this.ControlsBox = null;
     this.tweenControl = core.tweenControl;
     this.scene.background = SunnyTexture;
     this.onRenderQueue = core.onRenderQueue;
@@ -430,6 +430,15 @@ export class Ground extends CustomSystem {
               position.y += 10; // 在建筑上方显示
               this.tooltip.show(position);
             }
+
+            // 先隐藏所有建筑牌子，然后只显示当前悬停的建筑牌子
+            Object.values(this.buildingNameLabelMap).forEach((nameLabel) => {
+              nameLabel.visible = false;
+            });
+            const nameLabel = this.buildingNameLabelMap[buildingName];
+            if (nameLabel) {
+              nameLabel.visible = true;
+            }
           }
         } else {
           this.postprocessing.clearOutlineAll(1);
@@ -439,6 +448,11 @@ export class Ground extends CustomSystem {
           }
           // 隐藏提示框
           this.tooltip.hide();
+
+          // 隐藏所有建筑牌子
+          Object.values(this.buildingNameLabelMap).forEach((nameLabel) => {
+            nameLabel.visible = false;
+          });
         }
       }
     );
@@ -487,7 +501,7 @@ export class Ground extends CustomSystem {
     }
 
     // 执行后续切换时的初始化设置
-    this.performEnterInitialization();
+    // this.performEnterInitialization();
   }
 
   /**
@@ -660,6 +674,9 @@ string} name
         this.weather.setBoundingBox(weatherBox);
       }
     }
+    if (name === "1楼_外壳") {
+      this.ControlsBox = model;
+    }
 
     // 检查是否是建筑模型
     if (
@@ -755,7 +772,7 @@ string} name
         this.tooltip && this.tooltip.hide();
       }
     );
-    nameLabel.visible = true; // 默认显示
+    nameLabel.visible = false; // 默认隐藏
     nameLabel.position.copy(currentPosition);
     this.labelGroup.add(nameLabel);
     this.buildingNameLabelMap[name] = nameLabel;
@@ -974,17 +991,16 @@ string} name
     return group;
   }
   resetCamera(duration = 1000) {
-    if (!this.groundMesh) {
+    if (!this.ControlsBox) {
       console.warn("地面模型未加载，无法重置相机");
       return Promise.resolve();
     }
 
-    const { radius } = getBoxCenter(this.groundMesh);
-    const center = new THREE.Vector3(0, 0, 0);
+    const { radius, center } = getBoxCenter(this.ControlsBox);
     const cameraPosition = new THREE.Vector3(
-      center.x,
-      center.y + radius / 4,
-      center.z + radius * 0.68
+      center.x - radius * 2.48,
+      center.y + radius,
+      center.z + radius
     );
     const controlsTarget = center.clone();
 
