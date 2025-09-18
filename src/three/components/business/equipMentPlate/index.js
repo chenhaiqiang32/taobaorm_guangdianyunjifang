@@ -129,9 +129,12 @@ export class EquipmentPlate {
   }
   cherryPick() {
     // 筛选设备
+    console.log("设备筛选状态:", this.cherryArray);
+    
     Object.values(this.equip["camera"]).map(child => {
       if (this.cherryArray.includes("camera")) {
         child.children[0].visible = true;
+        child.children[1].visible = true; // 同时显示CSS2D标签
       } else {
         child.children[0].visible = false;
         child.children[1].visible = false;
@@ -140,6 +143,7 @@ export class EquipmentPlate {
     Object.values(this.equip["beacon"]).map(child => {
       if (this.cherryArray.includes("beacon")) {
         child.children[0].visible = true;
+        child.children[1].visible = true; // 同时显示CSS2D标签
       } else {
         child.children[0].visible = false;
         child.children[1].visible = false;
@@ -148,6 +152,7 @@ export class EquipmentPlate {
     Object.values(this.equip["inspectionSystem"]).map(child => {
       if (this.cherryArray.includes("inspectionSystem")) {
         child.children[0].visible = true;
+        child.children[1].visible = true; // 同时显示CSS2D标签
       } else {
         child.children[0].visible = false;
         child.children[1].visible = false;
@@ -209,6 +214,10 @@ export class EquipmentPlate {
     }
     let css2d = createCSS2DObject(labelEleOut,"board" + child.id);
     css2d.visible = visible;
+    
+    // 添加调试信息
+    console.log(`创建CSS2D标签: ${css2d.name}, 类型: ${child.type || 'unknown'}, 位置: (${css2d.position.x}, ${css2d.position.y}, ${css2d.position.z}), 可见性: ${visible}`);
+    
     return css2d;
   }
   boardClick() { }
@@ -264,6 +273,38 @@ export class EquipmentPlate {
     });
     this.equip["inspectionSystem"] = {};
     // this.removeEventListener();
+  }
+
+  // 调试方法：强制显示所有CSS2D标签
+  forceShowAllLabels() {
+    console.log("强制显示所有CSS2D标签");
+    this.equipGroup.traverse(child => {
+      if (child.name && child.name.startsWith("board")) {
+        console.log(`显示标签: ${child.name}, 位置: (${child.position.x}, ${child.position.y}, ${child.position.z})`);
+        child.visible = true;
+      }
+    });
+  }
+
+  // 调试方法：检查所有设备状态
+  debugEquipmentStatus() {
+    console.log("=== 设备状态调试 ===");
+    console.log("筛选数组:", this.cherryArray);
+    console.log("设备组:", this.equip);
+    
+    Object.entries(this.equip).forEach(([type, devices]) => {
+      console.log(`${type} 设备数量:`, Object.keys(devices).length);
+      Object.entries(devices).forEach(([id, device]) => {
+        console.log(`  ${id}:`, {
+          visible: device.visible,
+          children: device.children.map(child => ({
+            name: child.name,
+            visible: child.visible,
+            type: child.constructor.name
+          }))
+        });
+      });
+    });
   }
 }
 const t = new EquipmentPlate();

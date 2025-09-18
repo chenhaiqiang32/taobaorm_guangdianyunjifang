@@ -192,6 +192,7 @@ export class Store3D extends CoreExtensions {
       // 确保场景已正确设置
       if (targetSystem.isLoaded && systemType === "ground") {
         this.changeScene(targetSystem.scene);
+        this.resetCamera(1000);
       }
       targetSystem.onEnter(building);
     }

@@ -256,20 +256,32 @@ export class IndoorSubsystem extends CustomSystem {
   cameraMoveToFloor(group) {
     return new Promise((res, rej) => {
       const { center, radius, min, max } = getBoxCenter(group);
-
-      // 计算楼层高度
-      const floorHeight = max.y - min.y;
-
-      // 设置目标点为楼层中心
-      const target = center.clone();
-
-      // 计算相机位置：楼层中心上方，距离为楼层高度的1.5倍，确保能看到楼层内部
-      const cameraDistance = Math.max(floorHeight * 1.5, radius * 2);
-      const position = new THREE.Vector3(
-        center.x,
-        center.y + floorHeight + cameraDistance * 0.8, // 稍微偏上一点
-        center.z + cameraDistance * 0.6 // 稍微偏后一点，形成俯视角度
-      );
+      
+      let position = new THREE.Vector3();
+      let target = new THREE.Vector3();
+      
+      // 检查配置文件中是否有相机和控制器位置配置
+      const buildingKey = this.buildingName + "_室内";
+      const floorKey = group.name;
+      if (window.configs && 
+          window.configs.floorToName && 
+          window.configs.floorToName[buildingKey] && 
+          window.configs.floorToName[buildingKey][floorKey]) {
+        
+        const config = window.configs.floorToName[buildingKey][floorKey];
+        
+        // 使用配置文件中的位置
+        if (config.camera && config.controls) {
+          position.set(config.camera.x, config.camera.y, config.camera.z);
+          target.set(config.controls.x, config.controls.y, config.controls.z);
+        } else {
+          // 如果配置不完整，回退到包围盒计算
+          this.calculatePositionFromBoundingBox(center, radius, min, max, position, target);
+        }
+      } else {
+        // 没有配置，使用包围盒计算
+        this.calculatePositionFromBoundingBox(center, radius, min, max, position, target);
+      }
 
       // 相机移动动画
       this.tweenControl.changeTo({
@@ -295,6 +307,31 @@ export class IndoorSubsystem extends CustomSystem {
         },
       });
     });
+  }
+
+  /**
+   * 根据包围盒计算相机和控制器位置
+   * @param {THREE.Vector3} center - 包围盒中心
+   * @param {number} radius - 包围盒半径
+   * @param {THREE.Vector3} min - 包围盒最小值
+   * @param {THREE.Vector3} max - 包围盒最大值
+   * @param {THREE.Vector3} position - 相机位置（输出参数）
+   * @param {THREE.Vector3} target - 控制器目标位置（输出参数）
+   */
+  calculatePositionFromBoundingBox(center, radius, min, max, position, target) {
+    // 计算楼层高度
+    const floorHeight = max.y - min.y;
+
+    // 设置目标点为楼层中心
+    target.copy(center);
+
+    // 计算相机位置：楼层中心上方，距离为楼层高度的1.5倍，确保能看到楼层内部
+    const cameraDistance = Math.max(floorHeight * 1.5, radius * 2);
+    position.set(
+      center.x,
+      center.y + floorHeight + cameraDistance * 0.8, // 稍微偏上一点
+      center.z + cameraDistance * 0.6 // 稍微偏后一点，形成俯视角度
+    );
   }
 
   onLeave() {
@@ -365,14 +402,17 @@ export class IndoorSubsystem extends CustomSystem {
           window.configs.floorToName[this.buildingName + "_室内"][floor]
         ) {
           changeIndoor(
-            window.configs.floorToName[this.buildingName + "_室内"][floor]
+            window.configs.floorToName[this.buildingName + "_室内"][floor].name
           ); // 通知前端切换场景，前端推送设备数据
         }
         super.updateOrientation(); // 更新聚合数据
         this.core.crossSearch.changeSceneSearch();
         this.endChangeFloor = true;
         this.gatherOrSilentShader();
-
+        document.addEventListener("mousemove", (e) => {
+          console.log(this.camera.position, "camera.position");
+          console.log(this.controls.target, "controls.target");
+        });
         // 更新提示信息为楼栋状态
         if (this.sceneHint) {
           this.sceneHint.updateMessage("右键双击显示楼栋");
@@ -457,6 +497,11 @@ export class IndoorSubsystem extends CustomSystem {
   }
   addRayMove() {
     let event = this.core.raycast("mousemove", this.floors, (intersects) => {
+      console.log(
+        this.camera.position,
+        this.controls.target,
+        "camera.position, this.controls.target"
+      );
       if (intersects.length) {
         let target = intersects[0].object.userData.parent;
         if (this.currentPoint === target) return; // move事件过滤
