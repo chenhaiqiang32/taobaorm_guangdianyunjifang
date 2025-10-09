@@ -2,7 +2,6 @@ import * as THREE from "three";
 import { Store3D } from "../..";
 import { HeatCircle } from "../../../lib/blMeshes";
 import { createCSS2DObject } from "../../../lib/CSSObject";
-import { gatherClick } from "../../../message/postMessage";
 import MemoryManager from '../../../lib/memoryManager';
 
 export class GatherWarning {
@@ -228,7 +227,7 @@ export class GatherWarning {
     labelBottom.append(wordEle2);
 
     labelEle.onclick = () => {
-      gatherClick({ users,isDanger,alarmId: id });
+      // gatherClick({ users,isDanger,alarmId: id }); // 方法不存在已删除
     };
 
     let css2d = createCSS2DObject(labelEleOut,"board" + child.id);

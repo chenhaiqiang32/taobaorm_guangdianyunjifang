@@ -5,12 +5,6 @@ import { buildingMap } from "../../../assets/buildingMap";
 import { EscapeRoutePlate } from "./../../components/gather/escapeRouteLine";
 
 import { Store3D } from "../..";
-import {
-  dblclickBuilding,
-  getBuildingDetail,
-  changeIndoor,
-  postBuildingId,
-} from "../../../message/postMessage";
 import { SunnyTexture, Weather } from "../../components/weather";
 
 import { OrbitControls } from "three/examples/jsm/controls/OrbitControls";
@@ -335,7 +329,7 @@ export class Ground extends CustomSystem {
             !this.boxSelectStatus &&
             this.buildingNames.some((name) => current.name.includes(name))
           ) {
-            dblclickBuilding(current.name.split("_")[0]); // 通知前端我们即将进入室内，前端借此关闭一些弹窗
+            // dblclickBuilding(current.name.split("_")[0]); // 通知前端我们即将进入室内，前端借此关闭一些弹窗 - 方法不存在已删除
             this.core.changeSystem(
               "indoorSubsystem",
               current.name.split("_")[0]
@@ -621,7 +615,7 @@ export class Ground extends CustomSystem {
     if (visible) {
       // 未建模的建筑不用通知显示前端牌子
       // 通知前端显示建筑弹窗
-      getBuildingDetail(this.searchBuildingId);
+      // getBuildingDetail(this.searchBuildingId); // 方法不存在已删除
     }
     let title = this.buildingNameLabelMap[this.searchBuildingId];
     this.boardClick(title); // 视角拉近建筑
@@ -818,7 +812,7 @@ string} name
   };
 
   buildingNumClick(id) {
-    postBuildingId(id);
+    // postBuildingId(id); // 方法不存在已删除
   }
 
   changeBuildingNumber(array) {
@@ -891,7 +885,7 @@ string} name
     if (!this._hasInitialized) {
       this._hasInitialized = true;
       // ground场景正常流程镜头动画
-      changeIndoor("home");
+      // changeIndoor("home"); // 方法不存在已删除
       this.resetCamera(1500).then(() => {
         if (this.core && this.core.crossSearch) {
           this.core.crossSearch.changeSceneSearch();

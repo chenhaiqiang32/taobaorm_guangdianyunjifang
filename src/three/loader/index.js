@@ -3,7 +3,7 @@ import { LoadingManager } from "three";
 import { GLTFLoader } from "../../lib/GLTFLoader";
 import { GbkOBJLoader } from "../../lib/GbkOBJLoader";
 import { loadingInstance } from "./loading";
-import { postOnLoaded, postOnLoading } from "../../message/postMessage";
+import { postOnLoaded } from "../../message/postMessage";
 
 const loadingManager = new LoadingManager(
   function onLoaded() {
@@ -30,7 +30,7 @@ export const loader = new GLTFLoader(loadingManager);
 export function loadGLTF(models, onProgress, onLoaded) {
   const promises = [];
   loadingInstance.service(0);
-  postOnLoading();
+  // postOnLoading(); // 方法不存在已删除
   if (Array.isArray(models)) {
     models.forEach((model) => {
       if (model.type !== ".glb" && model.type !== ".gltf") return;

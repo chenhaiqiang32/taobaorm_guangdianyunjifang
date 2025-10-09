@@ -5,7 +5,6 @@ import { loadGLTF } from "@/three/loader";
 import { getBoxCenter } from "../../../lib/box3Fun";
 import { lightIndexUpdate, lightIndexReset } from "../../../shader/funs";
 
-import { changeIndoor } from "../../../message/postMessage";
 import EquipmentPlate from "../../components/business/equipMentPlate";
 import { SunnyTexture } from "../../components/weather";
 import { SpecialGround } from "../../../lib/blMeshes";
@@ -401,9 +400,10 @@ export class IndoorSubsystem extends CustomSystem {
           window.configs.floorToName[this.buildingName + "_室内"] &&
           window.configs.floorToName[this.buildingName + "_室内"][floor]
         ) {
-          changeIndoor(
-            window.configs.floorToName[this.buildingName + "_室内"][floor].name
-          ); // 通知前端切换场景，前端推送设备数据
+          // changeIndoor - 方法不存在已删除
+          // changeIndoor(
+          //   window.configs.floorToName[this.buildingName + "_室内"][floor].name
+          // ); // 通知前端切换场景，前端推送设备数据
         }
         super.updateOrientation(); // 更新聚合数据
         this.core.crossSearch.changeSceneSearch();

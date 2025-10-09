@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { createCSS2DObject } from "@/lib/CSSObject";
-import { getCameraVideo,getInspectionId } from "../../../../message/postMessage";
 // 定位系统
 export class EquipmentPlate {
   constructor() {
@@ -76,7 +75,6 @@ export class EquipmentPlate {
     let position = this.has(id,type).position;
     this.core.tweenControl.lerpTo(position,50,1000,new THREE.Vector3(0,10,0));
     if (type === "camera") {
-      getCameraVideo(id); // 通知前端打开相机
       this.searchCameraId = id;
     }
     if (type === "inspectionSystem") {
@@ -90,7 +88,6 @@ export class EquipmentPlate {
           value.children[0].material.map = textureCommon;
         }
       });
-      getInspectionId(id);
     }
     if (type !== "inspectionSystem") { this.boardVisibleSingle(id,true,type); }
 

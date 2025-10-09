@@ -5,7 +5,6 @@ import { Orientation3D } from "./Orientation3D";
 import { Cluster } from "./Cluster";
 import { BoxSelect } from "./BoxSelect";
 import { PersonFilter } from "./PersonFilter";
-import { closeDialog, postPersonBoard } from "../../../message/postMessage";
 import { HeatmapSystem } from "./Heatmap";
 import { Search } from "./Search";
 
@@ -206,7 +205,7 @@ export class Orientation {
     let id = child.id;
     if (this.searchId === id) {
       this.clearSearch(id);
-      closeDialog(id); // 通知前端关闭弹窗
+      // closeDialog(id); // 通知前端关闭弹窗 - 方法不存在已删除
     }
     if (this.followId === id) this.cancelFollow(id);
     this.#removeItem(child);
@@ -281,7 +280,7 @@ export class Orientation {
   /** 设置搜索 id */
   setSearchId(id) {
     this.searchId = id;
-    postPersonBoard(id);
+    // postPersonBoard(id); // 方法不存在已删除
   }
 
   /** 设置跟踪 id */

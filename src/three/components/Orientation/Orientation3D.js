@@ -1,7 +1,6 @@
 import * as THREE from "three";
 import { Orientation } from "./Orientation";
 import { createSprite } from "./utils";
-import { closeDialog, postGatherList } from "../../../message/postMessage";
 import MemoryManager from "../../../lib/memoryManager";
 import { Updatable } from "./Updatable";
 import { ClusterCard } from "./utils";
@@ -206,7 +205,7 @@ export class Orientation3D extends Updatable {
           return this.orientation.search();
         } else {
           this.orientation.clearSearch();
-          closeDialog(); // 通知前端关闭弹窗
+          // closeDialog(); // 通知前端关闭弹窗 - 方法不存在已删除
         }
       } else {
         // 人在当前场景
@@ -226,11 +225,12 @@ export class Orientation3D extends Updatable {
 
   gatherClick = (data) => {
     if (this.core.ground.boxSelectStatus !== true) {
-      postGatherList(
-        data.map((child) => {
-          return child.id;
-        })
-      );
+      // postGatherList - 方法不存在已删除
+      // postGatherList(
+      //   data.map((child) => {
+      //     return child.id;
+      //   })
+      // );
     }
     this.clusterModule.disperseClusterOnEvent(data);
     this.update(this.orientation);
